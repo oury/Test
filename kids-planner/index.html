@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star Chart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff8ee;
+    --card: #ffffff;
+    --ink: #2b2340;
+    --muted: #7a7290;
+    --line: #eadfce;
+    --star: #ffb627;
+    --good: #2bb673;
+    --danger: #e5484d;
+    --shadow: 0 4px 0 rgba(43, 35, 64, .10);
+    --radius: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1726; --card: #262036; --ink: #f4f0ff; --muted: #a9a0c0; --line: #3a3150;
+      --shadow: 0 4px 0 rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Baloo 2", system-ui, sans-serif; font-size: 18px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 16px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap;
+  }
+  h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.5px; }
+  h1 span { color: var(--star); }
+  nav { display: flex; gap: 6px; background: var(--card); padding: 5px; border-radius: 999px; box-shadow: var(--shadow); }
+  nav button {
+    border: 0; background: transparent; padding: 6px 16px; border-radius: 999px; font-weight: 700; color: var(--muted);
+  }
+  nav button.on { background: var(--ink); color: var(--bg); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+  .date-bar { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 18px; }
+  .date-bar strong { font-size: 22px; min-width: 220px; text-align: center; }
+  .round {
+    width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--card);
+    box-shadow: var(--shadow); font-size: 20px; font-weight: 800;
+  }
+
+  .kids { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+  .kid {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    border-top: 10px solid var(--kc); padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .kid-head { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 32px;
+    background: color-mix(in srgb, var(--kc) 25%, transparent);
+  }
+  .kid-head h2 { margin: 0; font-size: 26px; line-height: 1; }
+  .stars-total { margin-left: auto; font-weight: 800; font-size: 22px; white-space: nowrap; }
+  .stars-total::before { content: "★ "; color: var(--star); }
+  .progress { height: 14px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--kc); border-radius: 999px; transition: width .4s; }
+  .progress-label { font-size: 15px; color: var(--muted); margin-top: -6px; }
+
+  .task {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    border: 3px solid var(--line); background: var(--bg); border-radius: 16px; padding: 10px 12px;
+    transition: transform .1s, background .2s, border-color .2s;
+  }
+  .task:active { transform: scale(.97); }
+  .task .ico { font-size: 30px; width: 40px; text-align: center; }
+  .task .t { flex: 1; font-weight: 700; font-size: 20px; line-height: 1.15; }
+  .task .pts { color: var(--muted); font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .task .check {
+    width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--line);
+    display: grid; place-items: center; font-size: 20px; font-weight: 800; color: transparent; flex: none;
+  }
+  .task.done { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--card)); }
+  .task.done .t { text-decoration: line-through; text-decoration-thickness: 3px; opacity: .7; }
+  .task.done .check { background: var(--good); border-color: var(--good); color: #fff; }
+  .task.pop { animation: pop .35s; }
+  @keyframes pop { 50% { transform: scale(1.06); } }
+  .all-done { text-align: center; font-size: 22px; font-weight: 800; color: var(--good); }
+  .empty { color: var(--muted); text-align: center; padding: 12px; }
+
+  /* week */
+  .week-wrap { overflow-x: auto; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; margin-bottom: 18px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  th, td { padding: 8px 6px; text-align: center; border-bottom: 2px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th.today { color: var(--star); }
+  td.cell { font-size: 22px; }
+  td.cell button { border: 0; background: transparent; font-size: 22px; width: 40px; height: 40px; border-radius: 12px; }
+  td.cell button:hover { background: var(--bg); }
+  .week-kid { font-size: 22px; font-weight: 800; padding: 6px 4px 2px; }
+
+  /* rewards */
+  .reward-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .reward { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .reward .ico { font-size: 40px; }
+  .reward .t { font-weight: 800; font-size: 20px; }
+  .reward .cost { color: var(--muted); font-weight: 700; }
+  .reward .cost::before { content: "★ "; color: var(--star); }
+  .redeem-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 0; border-radius: 999px; padding: 4px 12px; font-weight: 700;
+    background: color-mix(in srgb, var(--kc) 25%, transparent);
+  }
+  .chip:disabled { opacity: .35; cursor: not-allowed; }
+  .history { margin-top: 20px; color: var(--muted); font-size: 16px; }
+  .history li { margin: 2px 0; }
+
+  /* parent */
+  .panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 18px; }
+  .panel h3 { margin: 0 0 10px; font-size: 22px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  input[type=text], input[type=number], select {
+    border: 2px solid var(--line); background: var(--bg); border-radius: 12px; padding: 6px 10px; min-width: 0;
+  }
+  input.emoji { width: 64px; text-align: center; }
+  input.num { width: 80px; }
+  input[type=color] { width: 44px; height: 40px; border: 0; padding: 0; background: none; }
+  .btn { border: 0; border-radius: 12px; padding: 7px 16px; font-weight: 800; background: var(--ink); color: var(--bg); }
+  .btn.ghost { background: transparent; color: var(--muted); border: 2px solid var(--line); }
+  .btn.del { background: transparent; color: var(--danger); padding: 4px 10px; }
+  .days { display: flex; gap: 4px; flex-wrap: wrap; }
+  .days label {
+    display: grid; place-items: center; width: 38px; height: 34px; border-radius: 10px;
+    border: 2px solid var(--line); font-size: 14px; font-weight: 700; cursor: pointer; user-select: none;
+  }
+  .days input { display: none; }
+  .days label:has(input:checked) { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .list-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 2px solid var(--line); flex-wrap: wrap; }
+  .list-item:last-child { border-bottom: 0; }
+  .list-item .grow { flex: 1; min-width: 140px; }
+  .sub { color: var(--muted); font-size: 15px; }
+  .lock { max-width: 360px; margin: 40px auto; text-align: center; }
+  .lock .q { font-size: 32px; font-weight: 800; margin: 10px 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120px);
+    background: var(--ink); color: var(--bg); padding: 10px 20px; border-radius: 999px; font-weight: 700;
+    transition: transform .3s; z-index: 10; max-width: calc(100% - 32px); text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .burst { position: fixed; pointer-events: none; font-size: 26px; z-index: 20; animation: fly .9s ease-out forwards; }
+  @keyframes fly { to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 24px; }
+    nav button { padding: 6px 10px; font-size: 16px; }
+    .date-bar strong { min-width: 0; font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>★</span> Star Chart</h1>
+  <nav id="nav">
+    <button data-view="today" class="on">Today</button>
+    <button data-view="week">Week</button>
+    <button data-view="rewards">Rewards</button>
+    <button data-view="parent">Parents</button>
+  </nav>
+</header>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const KEY = "kids-planner-v1";
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const pad = n => String(n).padStart(2, "0");
+  const dkey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function seed() {
+    const a = uid(), b = uid(), all = [0,1,2,3,4,5,6], school = [1,2,3,4,5];
+    return {
+      kids: [
+        { id: a, name: "Kid 1", emoji: "🦊", color: "#ff7a59" },
+        { id: b, name: "Kid 2", emoji: "🐼", color: "#4f8cff" },
+      ],
+      tasks: [
+        { id: uid(), kids: [a, b], title: "Make my bed", emoji: "🛏️", stars: 1, days: all },
+        { id: uid(), kids: [a, b], title: "Brush teeth (morning)", emoji: "🪥", stars: 1, days: all },
+        { id: uid(), kids: [a, b], title: "Pack school bag", emoji: "🎒", stars: 1, days: school },
+        { id: uid(), kids: [a, b], title: "Homework", emoji: "📚", stars: 2, days: school },
+        { id: uid(), kids: [a], title: "Feed the pet", emoji: "🐟", stars: 1, days: all },
+        { id: uid(), kids: [b], title: "Set the table", emoji: "🍽️", stars: 1, days: all },
+        { id: uid(), kids: [a, b], title: "Tidy my room", emoji: "🧸", stars: 2, days: [0, 3, 6] },
+        { id: uid(), kids: [a, b], title: "Brush teeth (night)", emoji: "🌙", stars: 1, days: all },
+      ],
+      rewards: [
+        { id: uid(), title: "Extra 30 min screen time", emoji: "📺", cost: 10 },
+        { id: uid(), title: "Pick the movie", emoji: "🍿", cost: 15 },
+        { id: uid(), title: "Ice cream trip", emoji: "🍦", cost: 25 },
+        { id: uid(), title: "Stay up 30 min later", emoji: "⏰", cost: 20 },
+      ],
+      done: {},       // { "2026-11-14": { kidId: [taskId, ...] } }
+      spent: [],      // [{ kid, reward, title, cost, at }]
+      pin: "",
+    };
+  }
+
+  let S;
+  try { S = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch { S = seed(); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+  let view = "today";
+  let day = new Date(); day.setHours(0, 0, 0, 0);
+  let weekStart = startOfWeek(day);
+  let parentUnlocked = false;
+  let lockQ = null;
+
+  function startOfWeek(d) { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; } // Monday
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const tasksFor = (kid, d) => S.tasks.filter(t => t.kids.includes(kid.id) && t.days.includes(d.getDay()));
+  const isDone = (kid, task, d) => (S.done[dkey(d)]?.[kid.id] || []).includes(task.id);
+  function toggle(kid, task, d) {
+    const k = dkey(d);
+    S.done[k] ??= {}; S.done[k][kid.id] ??= [];
+    const arr = S.done[k][kid.id], i = arr.indexOf(task.id);
+    if (i >= 0) arr.splice(i, 1); else arr.push(task.id);
+    save();
+    return i < 0;
+  }
+  function earned(kid) {
+    let n = 0;
+    for (const k in S.done) for (const id of S.done[k][kid.id] || []) {
+      const t = S.tasks.find(t => t.id === id); if (t) n += t.stars;
+    }
+    return n;
+  }
+  const spent = kid => S.spent.filter(s => s.kid === kid.id).reduce((a, s) => a + s.cost, 0);
+  const balance = kid => earned(kid) - spent(kid);
+
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+  function burst(x, y, n = 12) {
+    const bits = ["⭐", "✨", "🌟", "🎉"];
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement("div");
+      s.className = "burst"; s.textContent = bits[i % bits.length];
+      s.style.left = x + "px"; s.style.top = y + "px";
+      const a = Math.random() * Math.PI * 2, r = 60 + Math.random() * 90;
+      s.style.setProperty("--dx", Math.cos(a) * r + "px");
+      s.style.setProperty("--dy", Math.sin(a) * r - 40 + "px");
+      s.style.setProperty("--r", (Math.random() * 360 - 180) + "deg");
+      document.body.appendChild(s); setTimeout(() => s.remove(), 950);
+    }
+  }
+
+  const fmtDay = d => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((d - today) / 864e5);
+    const label = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    return diff === 0 ? `Today · ${label}` : diff === -1 ? `Yesterday · ${label}` : diff === 1 ? `Tomorrow · ${label}` : label;
+  };
+
+  // ---------- views ----------
+  function renderToday() {
+    if (!S.kids.length) return `<p class="empty">No kids yet — add them in <b>Parents</b>.</p>`;
+    return `
+      <div class="date-bar">
+        <button class="round" data-act="prev-day" aria-label="Previous day">‹</button>
+        <strong>${esc(fmtDay(day))}</strong>
+        <button class="round" data-act="next-day" aria-label="Next day">›</button>
+      </div>
+      <div class="kids">${S.kids.map(kid => {
+        const ts = tasksFor(kid, day), n = ts.filter(t => isDone(kid, t, day)).length;
+        const pct = ts.length ? Math.round(n / ts.length * 100) : 0;
+        return `<section class="kid" style="--kc:${kid.color}">
+          <div class="kid-head"><div class="avatar">${esc(kid.emoji)}</div><h2>${esc(kid.name)}</h2>
+            <div class="stars-total" title="Stars to spend">${balance(kid)}</div></div>
+          <div class="progress"><div style="width:${pct}%"></div></div>
+          <div class="progress-label">${n} of ${ts.length} done</div>
+          ${ts.length ? ts.map(t => { const d = isDone(kid, t, day); return `
+            <button class="task ${d ? "done" : ""}" data-act="toggle" data-kid="${kid.id}" data-task="${t.id}" aria-pressed="${d}">
+              <span class="ico">${esc(t.emoji)}</span><span class="t">${esc(t.title)}</span>
+              <span class="pts">★ ${t.stars}</span><span class="check">✓</span>
+            </button>`; }).join("") : `<p class="empty">Nothing planned — free day! 🎈</p>`}
+          ${ts.length && n === ts.length ? `<div class="all-done">All done! Amazing! 🎉</div>` : ""}
+        </section>`;
+      }).join("")}</div>`;
+  }
+
+  function renderWeek() {
+    const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+    const todayK = dkey(new Date());
+    const end = days[6];
+    return `
+      <div class="date-bar">
+        <button class="round" data-act="prev-week" aria-label="Previous week">‹</button>
+        <strong>${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</strong>
+        <button class="round" data-act="next-week" aria-label="Next week">›</button>
+      </div>
+      ${S.kids.map(kid => {
+        const ts = S.tasks.filter(t => t.kids.includes(kid.id));
+        let got = 0, total = 0;
+        const rows = ts.map(t => `<tr><td>${esc(t.emoji)} ${esc(t.title)}</td>${days.map(d => {
+          if (!t.days.includes(d.getDay())) return `<td class="cell"></td>`;
+          total++; const done = isDone(kid, t, d); if (done) got++;
+          return `<td class="cell"><button data-act="toggle-week" data-kid="${kid.id}" data-task="${t.id}" data-date="${dkey(d)}" aria-label="${esc(t.title)} ${DAYS[d.getDay()]}">${done ? "⭐" : "◻️"}</button></td>`;
+        }).join("")}</tr>`).join("");
+        return `<div class="week-wrap" style="--kc:${kid.color}">
+          <div class="week-kid">${esc(kid.emoji)} ${esc(kid.name)} <span class="sub">· ${got}/${total} this week</span></div>
+          <table><thead><tr><th></th>${days.map(d => `<th class="${dkey(d) === todayK ? "today" : ""}">${DAYS[d.getDay()]}<br><span class="sub">${d.getDate()}</span></th>`).join("")}</tr></thead>
+          <tbody>${rows || `<tr><td colspan="8" class="empty">No tasks yet</td></tr>`}</tbody></table></div>`;
+      }).join("") || `<p class="empty">No kids yet.</p>`}`;
+  }
+
+  function renderRewards() {
+    const recent = S.spent.slice(-8).reverse();
+    return `
+      <div class="kids" style="margin-bottom:18px">${S.kids.map(k => `
+        <div class="kid" style="--kc:${k.color}"><div class="kid-head"><div class="avatar">${esc(k.emoji)}</div><h2>${esc(k.name)}</h2>
+        <div class="stars-total">${balance(k)}</div></div></div>`).join("")}</div>
+      <div class="reward-list">${S.rewards.map(r => `
+        <div class="reward"><div class="ico">${esc(r.emoji)}</div><div class="t">${esc(r.title)}</div><div class="cost">${r.cost} stars</div>
+          <div class="redeem-row">${S.kids.map(k => `<button class="chip" style="--kc:${k.color}" data-act="redeem" data-kid="${k.id}" data-reward="${r.id}" ${balance(k) < r.cost ? "disabled" : ""}>${esc(k.emoji)} ${esc(k.name)}</button>`).join("")}</div>
+        </div>`).join("") || `<p class="empty">No rewards yet — add some in <b>Parents</b>.</p>`}</div>
+      ${recent.length ? `<div class="history"><b>Recently redeemed</b><ul>${recent.map(s => {
+        const k = S.kids.find(k => k.id === s.kid);
+        return `<li>${esc(k ? k.name : "?")} — ${esc(s.title)} (${s.cost < 0 ? "+" + -s.cost : s.cost} ★) · ${new Date(s.at).toLocaleDateString()}</li>`; }).join("")}</ul></div>` : ""}`;
+  }
+
+  function renderLock() {
+    if (!S.pin) {
+      lockQ ??= (() => { const a = 6 + Math.floor(Math.random() * 7), b = 6 + Math.floor(Math.random() * 7); return { a, b }; })();
+      return `<div class="panel lock"><h3>Grown-ups only 🔒</h3><p class="sub">Answer to continue</p>
+        <div class="q">${lockQ.a} × ${lockQ.b} = ?</div>
+        <form data-form="unlock" class="row" style="justify-content:center"><input type="number" name="ans" class="num" inputmode="numeric" autofocus><button class="btn">Go</button></form></div>`;
+    }
+    return `<div class="panel lock"><h3>Grown-ups only 🔒</h3><p class="sub">Enter your PIN</p>
+      <form data-form="unlock" class="row" style="justify-content:center"><input type="password" name="ans" class="num" inputmode="numeric" autofocus><button class="btn">Go</button></form></div>`;
+  }
+
+  function dayPicker(sel, name = "days") {
+    return `<div class="days">${[1,2,3,4,5,6,0].map(i => `<label><input type="checkbox" name="${name}" value="${i}" ${sel.includes(i) ? "checked" : ""}>${DAYS[i].slice(0,2)}</label>`).join("")}</div>`;
+  }
+
+  function renderParent() {
+    if (!parentUnlocked) return renderLock();
+    return `
+      <div class="panel"><h3>Kids</h3>
+        ${S.kids.map(k => `<div class="list-item">
+          <input class="emoji" type="text" value="${esc(k.emoji)}" data-edit="kid" data-id="${k.id}" data-field="emoji" aria-label="Emoji">
+          <input class="grow" type="text" value="${esc(k.name)}" data-edit="kid" data-id="${k.id}" data-field="name" aria-label="Name">
+          <input type="color" value="${k.color}" data-edit="kid" data-id="${k.id}" data-field="color" aria-label="Color">
+          <span class="sub">★ ${balance(k)}</span>
+          <button class="btn ghost" data-act="bonus" data-id="${k.id}" title="Give a bonus star">+1 ★</button>
+          <button class="btn del" data-act="del-kid" data-id="${k.id}">Remove</button></div>`).join("")}
+        <form data-form="add-kid" class="row" style="margin-top:10px">
+          <input class="emoji" name="emoji" type="text" value="🐯" aria-label="Emoji">
+          <input name="name" type="text" placeholder="Name" required>
+          <input name="color" type="color" value="#2bb673" aria-label="Color">
+          <button class="btn">Add kid</button></form>
+      </div>
+
+      <div class="panel"><h3>Tasks</h3>
+        ${S.tasks.map(t => `<div class="list-item">
+          <span style="font-size:28px">${esc(t.emoji)}</span>
+          <div class="grow"><b>${esc(t.title)}</b> <span class="sub">★ ${t.stars}</span><br>
+            <span class="sub">${t.kids.map(id => S.kids.find(k => k.id === id)?.name).filter(Boolean).map(esc).join(", ") || "nobody"} ·
+            ${t.days.length === 7 ? "every day" : [1,2,3,4,5,6,0].filter(d => t.days.includes(d)).map(d => DAYS[d]).join(" ")}</span></div>
+          <button class="btn ghost" data-act="edit-task" data-id="${t.id}">Edit</button>
+          <button class="btn del" data-act="del-task" data-id="${t.id}">Delete</button></div>
+          ${editingTask === t.id ? taskForm(t) : ""}`).join("")}
+        ${editingTask === "new" ? taskForm(null) : `<div class="row" style="margin-top:10px"><button class="btn" data-act="edit-task" data-id="new">+ New task</button></div>`}
+      </div>
+
+      <div class="panel"><h3>Rewards</h3>
+        ${S.rewards.map(r => `<div class="list-item">
+          <input class="emoji" type="text" value="${esc(r.emoji)}" data-edit="reward" data-id="${r.id}" data-field="emoji" aria-label="Emoji">
+          <input class="grow" type="text" value="${esc(r.title)}" data-edit="reward" data-id="${r.id}" data-field="title" aria-label="Reward">
+          <input class="num" type="number" min="1" value="${r.cost}" data-edit="reward" data-id="${r.id}" data-field="cost" aria-label="Cost"> ★
+          <button class="btn del" data-act="del-reward" data-id="${r.id}">Delete</button></div>`).join("")}
+        <form data-form="add-reward" class="row" style="margin-top:10px">
+          <input class="emoji" name="emoji" type="text" value="🎁" aria-label="Emoji">
+          <input name="title" type="text" placeholder="Reward" required>
+          <input class="num" name="cost" type="number" min="1" value="10" aria-label="Cost"> ★
+          <button class="btn">Add reward</button></form>
+      </div>
+
+      <div class="panel"><h3>Settings</h3>
+        <form data-form="pin" class="row"><span>Parent PIN</span>
+          <input class="num" type="password" name="pin" inputmode="numeric" placeholder="${S.pin ? "••••" : "none"}">
+          <button class="btn ghost">Save PIN</button><span class="sub">Leave blank to use a times-table question instead</span></form>
+        <div class="row">
+          <button class="btn ghost" data-act="export">Download backup</button>
+          <label class="btn ghost">Restore backup<input type="file" accept="application/json" data-act="import" hidden></label>
+          <button class="btn ghost" data-act="lock">Lock</button>
+          <button class="btn del" data-act="reset">Reset everything</button>
+        </div>
+      </div>`;
+  }
+
+  let editingTask = null;
+  function taskForm(t) {
+    t ??= { title: "", emoji: "✅", stars: 1, days: [0,1,2,3,4,5,6], kids: S.kids.map(k => k.id) };
+    return `<form data-form="task" data-id="${editingTask}" class="panel" style="background:var(--bg);margin:8px 0">
+      <div class="row"><input class="emoji" name="emoji" type="text" value="${esc(t.emoji)}" aria-label="Emoji">
+        <input class="grow" name="title" type="text" value="${esc(t.title)}" placeholder="What needs doing?" required>
+        <input class="num" name="stars" type="number" min="0" max="20" value="${t.stars}" aria-label="Stars"> ★</div>
+      <div class="row"><span class="sub">Days</span> ${dayPicker(t.days)}</div>
+      <div class="row"><span class="sub">Who</span>${S.kids.map(k => `<label class="chip" style="--kc:${k.color}"><input type="checkbox" name="kids" value="${k.id}" ${t.kids.includes(k.id) ? "checked" : ""}> ${esc(k.name)}</label>`).join("")}</div>
+      <div class="row"><button class="btn">Save</button><button type="button" class="btn ghost" data-act="cancel-task">Cancel</button></div>
+    </form>`;
+  }
+
+  const app = document.getElementById("app");
+  function render() {
+    document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === view));
+    app.innerHTML = { today: renderToday, week: renderWeek, rewards: renderRewards, parent: renderParent }[view]();
+  }
+
+  // ---------- events ----------
+  document.getElementById("nav").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    view = b.dataset.view; render();
+  });
+
+  app.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const act = el.dataset.act;
+    const kid = () => S.kids.find(k => k.id === el.dataset.kid);
+    const task = () => S.tasks.find(t => t.id === el.dataset.task);
+    switch (act) {
+      case "prev-day": day = addDays(day, -1); break;
+      case "next-day": day = addDays(day, 1); break;
+      case "prev-week": weekStart = addDays(weekStart, -7); break;
+      case "next-week": weekStart = addDays(weekStart, 7); break;
+      case "toggle": {
+        const r = el.getBoundingClientRect();
+        const nowDone = toggle(kid(), task(), day);
+        render();
+        if (nowDone) {
+          burst(r.right - 30, r.top + r.height / 2);
+          const k = kid(), ts = tasksFor(k, day);
+          if (ts.every(t => isDone(k, t, day))) { setTimeout(() => burst(innerWidth / 2, innerHeight / 2, 30), 200); toast(`${k.name} finished everything! 🎉`); }
+          else toast(`+${task().stars} ★ for ${k.name}!`);
+          app.querySelector(`[data-kid="${k.id}"][data-task="${el.dataset.task}"]`)?.classList.add("pop");
+        }
+        return;
+      }
+      case "toggle-week": {
+        const [y, m, d] = el.dataset.date.split("-").map(Number);
+        toggle(kid(), task(), new Date(y, m - 1, d)); break;
+      }
+      case "redeem": {
+        const k = kid(), r = S.rewards.find(r => r.id === el.dataset.reward);
+        if (balance(k) < r.cost) return;
+        if (!confirm(`Spend ${r.cost} stars on "${r.title}" for ${k.name}?`)) return;
+        S.spent.push({ kid: k.id, reward: r.id, title: r.title, cost: r.cost, at: Date.now() }); save();
+        const rect = el.getBoundingClientRect(); render(); burst(rect.left + rect.width / 2, rect.top, 20);
+        toast(`${k.name} got: ${r.title}! 🎁`); return;
+      }
+      case "bonus": {
+        const k = S.kids.find(k => k.id === el.dataset.id);
+        S.spent.push({ kid: k.id, reward: null, title: "Bonus star", cost: -1, at: Date.now() }); save();
+        toast(`Bonus star for ${k.name}! ⭐`); break;
+      }
+      case "del-kid": {
+        const k = S.kids.find(k => k.id === el.dataset.id);
+        if (!confirm(`Remove ${k.name} and their history?`)) return;
+        S.kids = S.kids.filter(x => x.id !== k.id);
+        S.tasks.forEach(t => t.kids = t.kids.filter(id => id !== k.id));
+        S.spent = S.spent.filter(s => s.kid !== k.id);
+        for (const d in S.done) delete S.done[d][k.id];
+        save(); break;
+      }
+      case "edit-task": editingTask = el.dataset.id; break;
+      case "cancel-task": editingTask = null; break;
+      case "del-task": {
+        const t = S.tasks.find(t => t.id === el.dataset.id);
+        if (!confirm(`Delete "${t.title}"? Stars already earned from it will be removed too.`)) return;
+        S.tasks = S.tasks.filter(x => x.id !== t.id); save(); break;
+      }
+      case "del-reward": S.rewards = S.rewards.filter(r => r.id !== el.dataset.id); save(); break;
+      case "lock": parentUnlocked = false; lockQ = null; view = "today"; break;
+      case "export": {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: "application/json" }));
+        a.download = `star-chart-backup-${dkey(new Date())}.json`; a.click(); return;
+      }
+      case "reset":
+        if (!confirm("Erase all kids, tasks, rewards and stars?")) return;
+        S = seed(); save(); break;
+      default: return;
+    }
+    render();
+  });
+
+  app.addEventListener("change", e => {
+    const el = e.target;
+    if (el.dataset.act === "import" && el.files[0]) {
+      el.files[0].text().then(txt => {
+        try { const d = JSON.parse(txt); if (!Array.isArray(d.kids) || !Array.isArray(d.tasks)) throw 0;
+          S = { ...seed(), ...d }; save(); render(); toast("Backup restored"); }
+        catch { toast("That file isn't a Star Chart backup"); }
+      });
+      return;
+    }
+    if (!el.dataset.edit) return;
+    const list = el.dataset.edit === "kid" ? S.kids : S.rewards;
+    const item = list.find(x => x.id === el.dataset.id);
+    item[el.dataset.field] = el.type === "number" ? Math.max(1, +el.value || 1) : el.value.trim() || item[el.dataset.field];
+    save(); render();
+  });
+
+  app.addEventListener("submit", e => {
+    e.preventDefault();
+    const f = e.target, fd = new FormData(f);
+    switch (f.dataset.form) {
+      case "unlock": {
+        const ans = String(fd.get("ans")).trim();
+        const ok = S.pin ? ans === S.pin : +ans === lockQ.a * lockQ.b;
+        if (ok) { parentUnlocked = true; render(); } else { toast("Not quite — try again"); lockQ = null; render(); }
+        return;
+      }
+      case "add-kid":
+        S.kids.push({ id: uid(), name: fd.get("name").trim(), emoji: fd.get("emoji").trim() || "🙂", color: fd.get("color") });
+        break;
+      case "add-reward":
+        S.rewards.push({ id: uid(), title: fd.get("title").trim(), emoji: fd.get("emoji").trim() || "🎁", cost: Math.max(1, +fd.get("cost") || 1) });
+        break;
+      case "task": {
+        const data = {
+          title: fd.get("title").trim(), emoji: fd.get("emoji").trim() || "✅",
+          stars: Math.max(0, +fd.get("stars") || 0),
+          days: fd.getAll("days").map(Number), kids: fd.getAll("kids"),
+        };
+        if (!data.days.length) return toast("Pick at least one day");
+        if (f.dataset.id === "new") S.tasks.push({ id: uid(), ...data });
+        else Object.assign(S.tasks.find(t => t.id === f.dataset.id), data);
+        editingTask = null; break;
+      }
+      case "pin":
+        S.pin = String(fd.get("pin")).trim(); toast(S.pin ? "PIN saved" : "PIN removed"); break;
+    }
+    save(); render();
+  });
+
+  // Roll over to the new day automatically if the app is left open overnight.
+  setInterval(() => {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    if (view === "today" && now - day === 864e5) { day = now; render(); }
+  }, 60e3);
+
+  render();
+})();
+</script>
+</body>
+</html>
